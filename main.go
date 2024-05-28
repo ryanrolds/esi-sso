@@ -77,7 +77,7 @@ func main() {
 				return
 			}
 
-			fmt.Fprintf(w, "token received")
+			fmt.Fprintf(w, "token received\n")
 
 			// read body
 			body, err := io.ReadAll(resp.Body)
