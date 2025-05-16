@@ -26,6 +26,8 @@ func main() {
 		"esi-characters.read_blueprints.v1",
 		"esi-assets.read_assets.v1",
 		"esi-universe.read_structures.v1",
+		"esi-planets.manage_planets.v1",
+		"esi-wallet.read_character_wallet.v1",
 	}
 	redirectURL := "http://localhost:8080/oauth/callback"
 	state := uuid.New().String()
@@ -51,9 +53,9 @@ func main() {
 			}
 
 			// exchange code for token
-			tokenURL := fmt.Sprintf("https://%s/oauth/token?grant_type=authorization_code&code=%s",
-				loginServer, callbackCode)
-			req, err := http.NewRequest("POST", tokenURL, nil)
+			tokenURL := fmt.Sprintf("https://%s/v2/oauth/token", loginServer)
+			requestBody := strings.NewReader(fmt.Sprintf("grant_type=authorization_code&code=%s", callbackCode))
+			req, err := http.NewRequest("POST", tokenURL, requestBody)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -71,6 +73,14 @@ func main() {
 
 			defer resp.Body.Close()
 
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			fmt.Printf("token response: %s\n", string(body))
+
 			if resp.StatusCode != http.StatusOK {
 				fmt.Printf("failed to get token: %d\n", resp.StatusCode)
 				http.Error(w, "failed to get token", http.StatusInternalServerError)
@@ -78,13 +88,6 @@ func main() {
 			}
 
 			fmt.Fprintf(w, "token received\n")
-
-			// read body
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
 
 			tokenResponse := struct {
 				AccessToken  string `json:"access_token"`
@@ -164,7 +167,7 @@ func main() {
 	}()
 
 	fmt.Printf("In a browser open the following url:\n")
-	fmt.Printf("https://%s/oauth/authorize?response_type=code&redirect_uri=%s&client_id=%s&scope=%s&state=%s\n",
+	fmt.Printf("https://%s/v2/oauth/authorize?response_type=code&redirect_uri=%s&client_id=%s&scope=%s&state=%s",
 		loginServer, redirectURL, clientID, strings.Join(scopes, " "), state)
 
 	signalChannel := make(chan os.Signal, 2)
